@@ -1,32 +1,32 @@
-'''Spectroscopy Analysis Tools
+'''Spectroscopy Package Tools Module
 	Author: Alex Pronschinske
-	Module Version: 0
 	
+	List of Classes: -none-
 	List of Functions:
 		find_multispec
 		spipNameFix
 		split_spectrum
-	Module dependencies: 
-		os
 		re
-	List of classes: -none-
 '''
 
+# built-in modules
 import os
 import re
+
+# third-party modules
 import numpy as np
 
 #===============================================================================
 def find_multispec(directory='./', r=False, spec_filter=None):
 	'''Find SPIP-formated MATRIX ASCII multiple spectroscopy ("multispec") files
 	
-	args:
+	Args:
 		directory (str): string of path location
 		r (bool): "r"ecursive search, if True include all sub-folders
 		spec_filter (str): 'zv', 'iv', or any vaild regular expression pattern.
 							Function will return only files with names that
 							match the given pattern.
-	returns:
+	Returns:
 		(list) ['./file', './file', './folder/file']
 	'''
 	if directory[-1] != '/': directory += '/'
@@ -111,6 +111,16 @@ def spipNameFix(dirName = './'):
 
 #===============================================================================
 def split_spectrum(X, Y):
+	'''Separate a horizontally concatenated (i.e. ramp-reversed) pair of curves
+		
+		Args:
+			X (list-like): x-axis data
+			Y (list-like): y-axis data
+		Returns:
+			(tuple) (X, lY, rY) New x-axis, y-data from the left half (lY),
+			and y-data from the right half (rY).
+	'''
+	
 	if len(X)%2 == 1:
 		raise ValueError(
 			'Spectrum must length must be even, given len(X)='+str(len(X))

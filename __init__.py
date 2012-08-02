@@ -1,11 +1,5 @@
-'''AMP Spectroscopy Analysis Package Initialization Module
+'''Spectroscopy Analysis Package Initialization Module
 	Author: Alex Pronschinske
-	
-	Module dependencies: 
-		bundles
-		specFit
-		specPlot
-		specTools
 '''
 
 # All functions and classes from the following modules should be imported as
@@ -16,4 +10,4 @@ from bundles import *
 from specTools import *
 from numerical import *
 
-__version__ = '02.00rc'
+__version__ = '2.00'

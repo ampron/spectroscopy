@@ -1,23 +1,11 @@
-'''Spectroscopy Data Processing Module
+'''Spectroscopy Bundles Submodule
 	Author: Alex M. Pronschinske
-	Version: 1
 	
 	List of classes:
 		SpecBundle
 		IVSTSBundle
 		ZVSTSBundle
 	List of functions: -none-
-	Module dependencies:
-		matplotlib.pyplot
-		numerical
-		numpy
-		os
-		random
-		re
-		scipy.stats
-		specFit
-		specPlot
-		spectroscopy.importers
 '''
 
 # built-in modules
@@ -32,7 +20,7 @@ from random import sample as randsample
 from scipy.stats import pearsonr
 import matplotlib.pyplot as plt
 
-# self package
+# internal modules
 import spectroscopy.numerical as specNum
 import spectroscopy.specPlot as specPlot
 import spectroscopy.specFit as specFit
@@ -43,9 +31,16 @@ import spectroscopy.importers as imps
 class SpecBundle(object):
 	'''Spectra Bundle Class
 	
-	This class will enable specific processing methods for a list of ndarrays
-	representing data curves.
+	This base class will enable specific processing methods for a list of
+	ndarrays representing data curves.  Since SpecBundle is a base class it
+	cannot be instantiated, only sub-classes can be instantiated.  An instance
+	can be instantiated from data in memory or from a data file.
 	
+	Instantiation Args:
+		* There are multiple input patterns, see examples.
+		Acceptable keyword arguments:
+			file_name (str)
+			file_type (str)
 	Instance Attributes:
 		file_name (str): Data file of origin
 		X (ndarray): Common X array
@@ -55,14 +50,17 @@ class SpecBundle(object):
 		units (list): Length 2 list of str's containing unit labels for X & Y
 		has_ramp_reversal (bool)
 	Class Methods:
-		__iter__
+		__add__
 		__getitem__
+		__iadd__
+		__isub__
+		__iter__
 		__setitem__
-		append
+		__sub__
+		add_spec
 		extend
-		clone
 		copy
-		insert
+		insert_spec
 		pop
 		reverse
 		coavg
@@ -74,13 +72,21 @@ class SpecBundle(object):
 		ramp_reversal_detect
 		ramp_reversal_fix
 		save_multispec
-	Example:
+	Examples:
 		allspec = ZVSTSBundle('data.zvms.asc', file_type='matrix_asc')
 		allspec = ZVSTSBundle(V, allZ, ('V', 'nm'), file_name='data.zvms.asc')
 		allspec = IVSTSBundle(V, allI, ('V', 'pA'), file_name='data.ivms.asc')
 	'''
 	
 	def __init__(self, *args, **kwargs):
+		if type(self) is SpecBundle:
+			raise RuntimeError(
+				'SpecBundle is a base class and cannot be instatiated'
+			)
+		# END if
+		
+		# For one string argument assumed it is a file path
+		# Call _import_file method of the sub-class for reading the file in
 		if len(args) == 1 and type(args[0]) is str:
 			self.file_name = args[0]
 			if 'file_type' in kwargs:
@@ -109,29 +115,6 @@ class SpecBundle(object):
 		self.__rr = None
 	# END __init__
 	
-	def __iter__(self):
-		'''SpecBundle will iterate over the allY attribue'''
-		for i in range(self.N): yield self[i]
-	# END __iter__
-	
-	def __getitem__(self, key):
-		return self.allY[key]
-	# END __getitem__
-	
-	def __setitem__(self, key, value):
-		if type(value) == list:
-			value = np.array(value)
-		elif type(value).__name__ == 'ndarray':
-			pass
-		else:
-			raise TypeError(
-				'Items in SpecBundle must be of type list or ndarray not '
-				+ type(value).__name__
-			)
-		# END if
-		self.allY[key] = value
-	# END __setitem__
-	
 	# Property descriptor functions
 	#------------------------------
 	@property
@@ -150,33 +133,129 @@ class SpecBundle(object):
 		return self.__rr
 	# END has_ramp_reversal
 	
+	# Magic methods
+	#--------------
+	
+	def __add__(self, other_bun):
+		bun_sum = self.copy
+		bun_sum.extend(other_bun)
+		return bun_sum
+	# END __add__
+	
+	def __getitem__(self, key):
+		return self.allY[key]
+	# END __getitem__
+	
+	def __len__(self):
+		return len(self.allY)
+	# END __len__
+	
+	def __iadd__(self, other_bun):
+		# TODO: add polymorphism so that a single spectrum or list of spectra
+		#       can be added as well
+		self.extend(other_bun)
+	# END __iadd__
+	
+	def __isub__(self, arg):
+		if type(arg) is int:
+			self.pop(arg)
+		elif type(arg) is list:
+			for i in list: self.pop(i)
+		# END if
+	# END __isub__
+	
+	def __iter__(self):
+		'''SpecBundle will iterate over the allY attribue'''
+		for i in range(self.N): yield self[i]
+	# END __iter__
+	
+	def __setitem__(self, key, value):
+		if type(value) == list:
+			value = np.array(value)
+		elif type(value).__name__ == 'ndarray':
+			pass
+		else:
+			raise TypeError(
+				'Items in SpecBundle must be of type list or ndarray not '
+				+ type(value).__name__
+			)
+		# END if
+		self.allY[key] = value
+	# END __setitem__
+	
+	def __sub__(self, arg):
+		new_bun = self.copy()
+		if type(arg) is int:
+			new_bun.pop(arg)
+		elif type(arg) is list:
+			for i in list: new_bun.pop(i)
+		# END if
+		return new_bun
+	# END __sub__
+	
 	# List-like methods
 	#------------------
 	def add_spec(self, *args):
+		'''Adds a single spectra (ndarray) to the end of self.allY
+		
+		The added spectrum is assumed to be the same length.
+		
+		Examples:
+			bun.add_spec(Y_new)
+		'''
+		
 		for Y in args: self.allY.append(Y)
 	# END add_spec
 	
-	def concat(self, *args):
+	def extend(self, *args):
+		'''Adds all spectra in a SpecBundle to self
+		
+		The added spectra are assumed to be the same length.  This method is
+		synonymous with the "+=" operator.
+		
+		Examples:
+			bun_1.extend(bun_2, bun_3, bun_4)
+		'''
+		
 		for bundle in args:
 			self.allY.extend(bundle.allY)
 			self.file_name += ',{}'.format(bundle.file_name)
-	# END concat
+	# END extend
 	
 	def copy(self):
+		'''Make a copy of self'''
+		
 		return type(self)(
 			self.X, self.allY, self.units, file_name=self.file_name
 		)
 	# END copy
 	
 	def insert_spec(self, index, Y):
+		'''Adds a single spectra (ndarray) anywhere into self.allY
+		
+		The added spectrum is assumed to be the same length.
+		
+		Examples:
+			bun.insert_spec(3, Y_new)
+		'''
+		
 		self.allY.insert(index, Y)
 	# END insert_spec
 	
 	def pop(self, index=0):
+		'''Removes and returns a spectrum from the specified index
+		
+		Args:
+			index = 0 (int)
+		Examples:
+			popped_Y = bun.pop(3)
+		'''
 		return self.allY.pop(index)
 	# END pop
 	
 	def reverse(self):
+		'''Reverses the self.allY list'''
+		
 		self.allY = self.allY[::-1]
 	# END reverse
 	
@@ -185,11 +264,13 @@ class SpecBundle(object):
 	def coavg(self, output_stdev=False):
 		'''Co-average spectra
 		
+		The returned spectrum will be an average of all spectra in the bundle.
+		
 		Args:
 			output_stdev = False (bool): If true the tuple, (mY, eY) is output
 										instead of just the ndarray mY.
 		Returns:
-			(tuple|ndarray) Outputs the ndarray mY ("mean Y") and also
+			(ndarray|tuple) Outputs the ndarray mY ("mean Y") and also
 			optionally eY ("error in Y") which is the standard deviation.
 		'''
 		
@@ -202,7 +283,7 @@ class SpecBundle(object):
 		mY = mY / self.N
 		eY = np.sqrt( eY/self.N - mY**2 )
 		
-		if output_stdev: return (mY, eY)
+		if output_stdev: return mY, eY
 		else: return mY
 	# END coavg
 	
@@ -212,7 +293,7 @@ class SpecBundle(object):
 		Args: none
 		Returns:
 			(matrix) A numpy matrix object that contains the correlations
-			between all of the np.ctra in the bundle
+			between all of the spectra in the bundle
 		'''
 		
 		cmat = np.matrix(
@@ -233,6 +314,22 @@ class SpecBundle(object):
 	# END correl_matrix
 	
 	def deriv_sg(self, x_window, poly_order, deriv_order=0):
+		'''Differential all spectra in bundle
+		
+		Calculates the derivative of the individual spectra using a Savitzky-
+		Golay filter.  This is NOT an in-place method.
+		
+		Args:
+			x_window (float): Width of the fitting window is units of the x-axis
+			poly_order (int): Order of the fitting polynomial
+			deriv_order (int): Order of the derivative
+		Returns:
+			(same type as self) SpecBundle sub-class where all spectra are
+			corresponding derivatives of this bundle's spectra
+		Examples:
+			deriv_bun = bun.deriv_sg(0.5, 3, 1)
+		'''
+		
 		# Validate input
 		try:
 			poly_order = np.abs(int(poly_order))
@@ -278,7 +375,20 @@ class SpecBundle(object):
 	# END deriv_sg
 	
 	def fan(self, delta, in_place=False):
-		'''spread out the spectra vertically'''
+		'''Spread out the spectra vertically
+		
+		Adds amount i*delta to each Y = self.allY[i].  This method is intended
+		to be used on a bundle before plotting.
+		
+		Args:
+			delta (float): Space between adjacent spectra in units of y-axis
+			in_place = False (bool): Controls if the fanning is done in-place
+		Returns:
+			(same as self) Bundle of fanned-out spectra
+		
+		TODO: make this an in-place ONLY version of a function in the plotting
+		      sub-module
+		'''
 		if in_place:
 			for i in range(self.N):
 				self[i] = self[i] + i*delta
@@ -311,7 +421,7 @@ class SpecBundle(object):
 					scratch directory
 			Returns:
 				(list) List of peak locations
-			Returns w/ write_all=True:
+			Returns w/ full_output=True:
 				(list) List of dictionaries with key values:
 					'i': spectrum index in bundle,
 					'x0': peak location,
@@ -442,18 +552,19 @@ class SpecBundle(object):
 	# END find_peaks
 	
 	def plot_density(self, ax=None, mkrcolor='blue'):
+		'''Calls specPlot.plot_density with self'''
 		return specPlot.plot_density(self, ax, mkrcolor)
 	# END plot_density
 	
 	def ramp_reversal_detect(self, N=3):
-		'''Detect horizontally concatenated ramp-reversal data
+		'''Detect horizontally concatenated (i.e. ramp-reversed) data
 			
 			This method will sample N random spectra from the bundle and look
 			for a large jump in the data at the halfway point as a marker of
 			concatenated forward and backward spectrum sweeps.
 			
 			Args:
-				N (int): Number of spectra to sample for detection
+				N = 3 (int): Number of spectra to sample for detection
 			Returns:
 				(bool)
 		'''
@@ -476,16 +587,14 @@ class SpecBundle(object):
 		# END if
 		
 		if dratio > 0.5:
-			#print '\tYES, RR has been detected!, {0:0.5f}'.format(dratio)
 			return True
 		else:
-			#print '\tNO, RR is not detected, {0:0.5f}'.format(dratio)
 			return False
 		# END for
 	# END ramp_reversal_detect
 	
 	def ramp_reversal_fix(self, opt='double'):
-		'''Separate horizontally concatenated ramp-reversal data
+		'''Separate horizontally concatenated (i.e. ramp-reversed) data
 			
 			Args:
 				opt (str): Name of method for handling separated data. Options
@@ -535,7 +644,22 @@ class SpecBundle(object):
 		# END if
 	# END ramp_reversal_fix
 	
-	def save_multispec(self, file_path):
+	def save_bundle(self, file_path):
+		'''Save self as a text file
+		
+		This method will write the data to a text file with the following
+		format:
+		# <header lines>
+		
+		<col units>   <col units>   ...
+		<col axis>    <col axis>    ...
+		<data point>  <data point>  ...
+		
+		Args:
+			file_path (str): save location and file name with appropriate
+							 file extension
+		'''
+		
 		f = open(file_path, 'w')
 		
 		# Write header
@@ -569,12 +693,14 @@ class SpecBundle(object):
 		# END for
 		
 		f.close()
-	# END save_multispec
+	# END save_bundle
 # END SpecBundle
 
 #===============================================================================
 class IVSTSBundle(SpecBundle):
 	'''I(V)-STS Spectra Bundle Class
+	
+	This SpecBundle sub-class is specifically for analyzing I(V)-STS data.
 	
 	Class Methods:
 		_import_file
@@ -584,6 +710,13 @@ class IVSTSBundle(SpecBundle):
 	'''
 	
 	def _import_file(self, file_name, file_type=''):
+		'''Import file method
+		
+		This method will assume the data is MATRIX data saved as an ASCII text
+		file by SPIP and call that importer module, unless file_type is
+		otherwise specified.
+		'''
+		
 		if file_type is '':
 			# Detect the file type
 			file_type = 'matrix_asc'
@@ -603,10 +736,13 @@ class IVSTSBundle(SpecBundle):
 		self.X = X
 		self.allY = allY
 		self.units = units
-		self.zero_y0
+		self.zero_y0()
 	# END _import_file
 	
 	def zero_y0(self):
+		'''Shifts all spectra vertically so they intersect (0, 0)
+		'''
+		
 		X = self.X
 		dx = X[1] - X[0]
 		i0_est = int(-X[0]/dx)
@@ -626,14 +762,18 @@ class IVSTSBundle(SpecBundle):
 	# END zero_y0
 	
 	def norm_deriv(self, x_window, poly_order):
-		''' Calculate the normalized dI/dV (i.e. (V/I)*dI/dV)
+		''' Calculate the normalized dI/dV (i.e. (V/I)*dI/dV) for all spectra
+			
+			This method does NOT operate in-place.
 			
 			Args:
-				---
+				x_window (float): Differentiation parameter passed to deriv_sg
+				plot_order (int): (see above)
 			Returns:
-				(SpecBundle)
-			Example:
-				---
+				(SpecBundle) All spectra are corresponding normalized derivative
+				of self's spectra
+			Examples:
+				ndivsts = ivsts.norm_deriv(0.1, 1)
 		'''
 		
 		dYs = self.deriv_sg(x_window, poly_order, 1)
@@ -649,6 +789,23 @@ class IVSTSBundle(SpecBundle):
 	def filter_nd_abs(
 		self, flvl, x_window=0.1, poly_order=1, std_out=False
 	):
+		'''Filters out data with missing points and relatively large spikes
+		
+		This method behaves like the pop method, where the popped elements are
+		rejected spectra and self is left with only acceptable spectra.
+		
+		Args:
+			flvl (float): Absolute rejection level in units of y-axis
+			x_window = 0.1 (float)
+			poly_order = 1 (int)
+			std_out = False (bool): Controls print statements
+		Returns:
+			(same as self) Bundle containing the rejected spectra
+		Examples:
+			rejects = bun.filter_nd_abs(5)
+			rejects = bun.filter_nd_abs(5, 0.5, 3, True)
+		'''
+		
 		warnings.simplefilter('error', RuntimeWarning)
 		
 		X = self.X
@@ -657,6 +814,7 @@ class IVSTSBundle(SpecBundle):
 		n = 0
 		while n < N:
 			Y = self.pop()
+			# Assume the spectra is ramp-reversed data
 			X_, Y_f, Y_r = specTools.split_spectrum(X, Y)
 			
 			missing_point = False
@@ -671,9 +829,6 @@ class IVSTSBundle(SpecBundle):
 			
 			if m > flvl or missing_point:
 				if std_out: print 'curve {0:03d}, m = {1}'.format(n, m)
-				#plt.plot(X_, ndY_f, X_, ndY_r)
-				#plt.show()
-				#plt.close()
 				rejects.append(Y)
 			else:
 				self.add_spec(Y)
@@ -690,12 +845,21 @@ class IVSTSBundle(SpecBundle):
 class ZVSTSBundle(SpecBundle):
 	'''z(V)-STS Spectra Bundle Class
 	
+	This SpecBundle sub-class is specifically for analyzing z(V)-STS data.
+	
 	Class Methods:
 		_import_file
 		make_relative
 	'''
 	
 	def _import_file(self, file_name, file_type=''):
+		'''Import file method
+		
+		This method will assume the data is MATRIX data saved as an ASCII text
+		file by SPIP and call that importer module, unless file_type is
+		otherwise specified.
+		'''
+		
 		if file_type is '':
 			# Detect the file type
 			file_type = 'matrix_asc'
@@ -717,6 +881,7 @@ class ZVSTSBundle(SpecBundle):
 	# END _import_file
 	
 	def make_relative(self):
+		'''Set all spectra to start from z=0'''
 		X = self.X
 		if X[0] < 0 and 0 < X[-1]:
 			# find minimum and set it to zero

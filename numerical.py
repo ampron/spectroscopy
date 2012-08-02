@@ -1,23 +1,28 @@
 '''Spectroscopy Package Numerical Methods Module
 	Author: Alex Pronschinske
-	Version: 1 (developmental)
 	
 	List of Classes: -none-
 	List of Functions: 
 		interp_lin
 		norm_deriv
 		sgSm
-	Module dependencies: 
-		matplotlib.pyplot
-		numpy
 '''
 
+# third-party modules
 import numpy as np
 
 #===============================================================================
 def interp_lin(X, Y, x):
-	'''Estimate y(x) using a linear interpolation
+	'''Estimate y(x) for a discrete data set using a linear interpolation
+	
+	Args:
+		X (list-like): x-axis data
+		Y (list-like): y-axis data
+		x (float): x value for which y(x) will be interpolated
+	Returns:
+		(float) y(x)
 	'''
+	
 	if x < X[0] or X[-1] < x:
 		raise ValueError('Cannot interpolate a value outside domain')
 	
@@ -34,14 +39,20 @@ def interp_lin(X, Y, x):
 
 #===============================================================================
 def norm_deriv(X, Y, x_window, poly_order):
-	''' Calculate the normalized dI/dV (i.e. (V/I)*dI/dV)
+	''' Calculate the logarithmic derivative (dlnY/dlnX) of the spectrum
+		
+		dlnY/dlnX = (X/Y)*dX/dY.  Note that, ndY stands for "normalized dY",
+		this is synonymous with logarithmic dY for STS.
 		
 		Args:
-			---
+			X (list-like): x-axis data
+			Y (list-like): y-axis data
+			x_window (float): Differentiation parameter passed to deriv_sg
+			plot_order (int): (see above)
 		Returns:
-			(SpecBundle)
+			(numpy.ndarray) logarithmic derivative y-axis data
 		Example:
-			---
+			ndY = norm_deriv(X, Y, 0.5, 3)
 	'''
 	
 	dx = X[1] - X[0]
@@ -65,13 +76,13 @@ def sgSm(y, window_size, order, deriv=0):
 	Args:
 		Y (list): Objective data array.
 		window_size (int): Number of points to use in the local regressions.
-						Should be an odd integer.
+						   Should be an odd integer.
 		order (int): Order of the polynomial used in the local regressions.
-					Must be less than window_size - 1.
+					 Must be less than window_size - 1.
 		deriv = 0 (int): The order of the derivative to take.
 	Returns:
 		(ndarray)  The resulting smoothed curve data. (or it's n-th derivative)
-	Test:
+	Example:
 		t = np.linspace(-4, 4, 500)
 		y = np.exp( -t**2 ) + np.random.normal(0, 0.05, t.shape)
 		ysg = sg_smooth(y, window_size=31, order=4)

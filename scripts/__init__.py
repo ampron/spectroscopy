@@ -3,9 +3,6 @@
 	
 	List of Classes: -none-
 	List of Functions: -none-
-	Module dependencies:
-		sys
-		os
 '''
 
 # Built-in modules
@@ -13,9 +10,9 @@ import sys
 import os
 
 # This will setup the __all__ list dynamically, so that it includes all modules
-#  in the "scripts" sub-package.
+# in the "scripts" sub-package.
 # This allows for "from spectroscopy.scripts import *" to import all script
-#  modules that are in the scripts folder
+# modules that are in the scripts folder
 __all__ = []
 for file_name in os.listdir(os.path.dirname(__file__)):
 	if file_name[-3:] == '.py' and file_name != '__init__.py':

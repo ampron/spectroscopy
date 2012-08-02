@@ -1,26 +1,30 @@
 '''MATRIX ASCII File Importing Module
 	Author: Alex M. Pronschinske
-	Version: 1
 	
 	List of classes: -none-
 	List of functions: 
 		import_matrix_asc_iv
 		import_matrix_asc_zv
-	Module dependencies:
-		numpy
-		re
 '''
 
+# built-in modules
 import re
+
+# third-party modules
 import numpy as np
 
 #===============================================================================
 def import_matrix_asc_iv(file_name):
+	'''Function for importing I(V)-STS data
+	
+	'''
 	return _import_matrix_asc(file_name)
 # END import_iv
 
 #===============================================================================
 def import_matrix_asc_zv(file_name):
+	'''Function for importing z(V)-STS data
+	'''
 	X, allY, units = _import_matrix_asc(file_name)
 	
 	# conversions from key to nanometers
@@ -36,6 +40,8 @@ def import_matrix_asc_zv(file_name):
 
 #===============================================================================
 def _import_matrix_asc(file_name):
+	'''General STS importer function
+	'''
 	f = open(file_name)
 	
 	X = []

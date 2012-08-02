@@ -1,11 +1,9 @@
 '''Scala File Importing Module
 	Author: Alex M. Pronschinske
-	Version: 1
 	
 	List of classes: -none-
 	List of functions: 
 		import_scala_iv
-	Module dependencies: -none-
 '''
 
 #===============================================================================

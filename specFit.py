@@ -1,71 +1,57 @@
-'''AMP Data Fitting Module
+'''Spectroscopy Package Data Fitting Module
 	Author: Alex M. Pronschinske
 	
-	List of classes: 
-		PeakFitter
+	List of classes: -none-
 	List of functions:
 		gaussFit
 		gaussLinFit
 		lorentzFit
 		linfit
-	Module dependencies: 
-		scipy
-		scipy.optimize
 '''
 
-import scipy as sp
+# third-party modules
+import numpy as np
 from scipy.optimize import leastsq
 
-class PeakFitter():
-	'''Peak fitting classes
+#===============================================================================
+def gaussFit(X, Y):
+	'''Gaussian least-squares fit
 	
-	Class methods:
+	This function fits a gaussian function to the given data, it is assumed that
+	the given data only contains ONE peak.  The functional form of the gaussian
+	peak is as follows:
+		y(x) = A * exp( -0.5 * ((x-x0)/sig)**2 ) + y0,
+	where A is the height of the peak from the baseline (y0), x0 is the peak
+	center, and sig is the standard deviation.  The initial parameter guess are:
+		x0, y-weighted mean of the x values,
+		sig, y-weighted standard deviation of the x values,
+		A, maximum y value,
+		y0, median value of the y data.
+	This function also returns the R**2 "goodness" of the fit (Rsqr).
+	
+	Args:
+		X (list-like): x-axis data
+		Y (list-like): y-axis data
+	Returns:
+		(numpy.ndarray) [x0, sig, A, y0, Rsqr]
 	'''
 	
-	def __init__():
-		pass
-	# END __init__
-	
-	def guess(self, X, Y):
-		'''Peak Parameter Guessing Method
-		
-		Args:
-			X (list-like): X data points
-			Y (list-like): Y data points
-		Returns:
-			(tuple)  (x0_guess, std_guess)
-		'''
-		
-		Y = (Y-min(Y)) / sum(Y)
-		x0_guess = 0.0
-		std_guess = 0.0
-		sum_sqrs = 0.0
-		for i in range(0, len(X)):
-			x0_guess += X[i]*Y[i]
-			sum_sqrs += X[i]**2 * Y[i]
-		std_guess = sp.sqrt( sum_sqrs - x0_guess**2 )
-		
-		return (x0_guess, std_guess)
-	# END guess
-# END PeakFitter
-
-def gaussFit(X, Y):
 	# Find initial guess for x0 and w
 	Y2 = Y - min(Y)
 	Y2 = Y2 / sum(Y2)
-	pInit = sp.array([0.0, 0.0, max(Y), sp.median(Y)])
+	pInit = np.array([0.0, 0.0, max(Y), np.median(Y)])
 	ex1 = 0.0
 	for i in range(0, len(X)):
 		pInit[0] = pInit[0] + X[i]*Y2[i]
 		ex1 += X[i]**2 * Y2[i]
-	pInit[1] = sp.sqrt( ex1 - pInit[0]**2 )
+	pInit[1] = np.sqrt( ex1 - pInit[0]**2 )
 	
 	def GaussResid(params):
 		x0 = params[0]
 		sig = params[1]
 		A = params[2]
 		y0 = params[3]
-		F = A * sp.exp(-0.5*((X-x0)/sig)**2 ) + y0
+		F = A * np.exp(-0.5*((X-x0)/sig)**2 ) + y0
 		return F-Y
 	
 	(fitParams, cov_x, infodict, mesg, intFlag) = leastsq(
@@ -75,22 +61,46 @@ def gaussFit(X, Y):
 		fitParams[1] = abs(fitParams[1])
 	
 	Yf = infodict['fvec']
-	Rsq = 1.0 - ( sp.std(Y)**2/sum((Y-Yf)**2) )
+	Rsq = 1.0 - ( np.std(Y)**2/sum((Y-Yf)**2) )
 	
-	return sp.append(fitParams, Rsq)
+	return np.append(fitParams, Rsq)
 # END gaussFit
 
+#===============================================================================
 def gaussLinFit(X, Y):
+	'''Gaussian plus linear background least-squares fit
+	
+	This function fits a gaussian function with a linear background to the given
+	data, it is assumed that the given data only contains ONE peak.  The
+	functional form is as follows:
+		y(x) = A * exp( -0.5 * ((x-x0)/sig)**2 ) + y1*x + y0,
+	where A is the height of the peak from the baseline (y1*x + y0), x0 is the
+	peak center, and sig is the standard deviation.  The initial parameter
+	guess are:
+		x0, y-weighted mean of the x values,
+		sig, y-weighted standard deviation of the x values,
+		A, maximum y value,
+		y1, zero
+		y0, median value of the y data.
+	This function also returns the R**2 "goodness" of the fit (Rsqr).
+	
+	Args:
+		X (list-like): x-axis data
+		Y (list-like): y-axis data
+	Returns:
+		(numpy.ndarray) [x0, sig, A, y1, y0, Rsqr]
+	'''
+	
 	# Find initial guess for x0 and w
 	Y2 = Y - min(Y)
 	Y2 = Y2 / sum(Y2)
 	#Parameter Array: [x0, sig, A, y1, y0]
-	pInit = sp.array([0.0, 0.0, max(Y), 0.0, sp.median(Y)])
+	pInit = np.array([0.0, 0.0, max(Y), 0.0, np.median(Y)])
 	ex1 = 0.0
 	for i in range(0, len(X)):
 		pInit[0] = pInit[0] + X[i]*Y2[i]
 		ex1 += X[i]**2 * Y2[i]
-	pInit[1] = sp.sqrt( ex1 - pInit[0]**2 )
+	pInit[1] = np.sqrt( ex1 - pInit[0]**2 )
 	
 	def GaussResid(params):
 		x0 = params[0]
@@ -98,7 +108,7 @@ def gaussLinFit(X, Y):
 		A = params[2]
 		y1 = params[3]
 		y0 = params[4]
-		F = A * sp.exp(-0.5*((X-x0)/sig)**2 ) + y1*X + y0
+		F = A * np.exp(-0.5*((X-x0)/sig)**2 ) + y1*X + y0
 		return F-Y
 	
 	(fitParams, cov_x, infodict, mesg, intFlag) = leastsq(
@@ -108,21 +118,43 @@ def gaussLinFit(X, Y):
 		fitParams[1] = abs(fitParams[1])
 	
 	Yf = infodict['fvec']
-	Rsq = 1.0 - ( sp.std(Y)**2/sum((Y-Yf)**2) )
+	Rsq = 1.0 - ( np.std(Y)**2/sum((Y-Yf)**2) )
 	
-	return sp.append(fitParams, Rsq)
+	return np.append(fitParams, Rsq)
 # END gaussFit
 
+#===============================================================================
 def lorentzFit(X, Y):
+	'''Lorentzian least-squares fit
+	
+	This function fits a Lorentzian function to the given data, it is assumed
+	that the given data only contains ONE peak.  The functional form of the
+	Lorentzian peak is as follows:
+		y(x) = A / (1.0 + 4.0*((x-x0)/w)**2 ) + y0,
+	where A is the height of the peak from the baseline (y0), x0 is the peak
+	center, and w is the standard deviation.  The initial parameter guess are:
+		x0, y-weighted mean of the x values,
+		sig, sqrt(8*log(2)) * the y-weighted standard deviation of the x values,
+		A, maximum y value,
+		y0, median value of the y data.
+	This function also returns the R**2 "goodness" of the fit (Rsqr).
+	
+	Args:
+		X (list-like): x-axis data
+		Y (list-like): y-axis data
+	Returns:
+		(numpy.ndarray) [x0, w, A, y0, Rsqr]
+	'''
+	
 	# Find initial guess for x0 and w
 	Y2 = Y - min(Y)
 	Y2 = Y2 / sum(Y2)
-	pInit = sp.array([0.0, 0.0, max(Y), sp.median(Y)])
+	pInit = np.array([0.0, 0.0, max(Y), np.median(Y)])
 	ex1 = 0.0
 	for i in range(0, len(X)):
 		pInit[0] = pInit[0] + X[i]*Y2[i]
 		ex1 += X[i]**2 * Y2[i]
-	pInit[1] = sp.sqrt(8.0*sp.log(2.0)) * sp.sqrt( ex1 - pInit[0]**2 )
+	pInit[1] = np.sqrt(8.0*np.log(2.0)) * np.sqrt( ex1 - pInit[0]**2 )
 	
 	def lntzResid(params):
 		x0 = params[0]
@@ -141,16 +173,29 @@ def lorentzFit(X, Y):
 	return fitParams		
 # END lorentzFit
 
+#===============================================================================
 def linfit(X, Y, eY=None, full_output=False):
 	'''Weighted Linear Best-Fit
 	
+	Functional form of the linear fit: y(x) = a*x + b
+	
 	Args:
-		X (list):
-		Y (list):
-		eY (list|float|int):
-		full_output (bool):
+		X (list-like): x-axis data
+		Y (list-like): y-axis data
+		eY (list|float|int): Optional, list or value representing the error of
+							  each y value
+		full_output (bool): If True, extra output will be given
 	Returns:
-		
+		(tuple) For full_output=False, (a, b).  Otherwise, if error is not
+		given, (a, b, Rsqr), where Rsqr is the R**2, else if error is specified,
+		(a, b, a_err, b_err, reduc_chisqr), where a_err and b_err are the
+		respective fit parameter errors and reduc_chisqr is the reduced chi**2
+		value.
+	Examples:
+		a, b = linfit(X, Y)
+		a, b, Rsqr = linfit(X, Y, full_output=True)
+		a, b, a_err, b_err, reduc_chisqr = linfit(X, Y, 0.5, True)
+		a, b, a_err, b_err, reduc_chisqr = linfit(X, Y, [0.1, 0.2, ...], True)
 	'''
 	
 	if type(X) != list and type(X).__name__ != 'ndarray':
@@ -201,14 +246,14 @@ def linfit(X, Y, eY=None, full_output=False):
 	b = (sx2*sy - sx*sxy) / delta
 	
 	if not full_output:
-		return (a, b)
+		return a, b
 	
 	if eY is None:
 		ssxy = sxy - sx*sy/n
 		ssxx = sx2 - sx*sx/n
 		ssyy = sy2 - sy*sy/n
 		Rsqr = ssxy*ssxy / (ssxx*ssyy)
-		return (a, b, Rsqr)
+		return a, b, Rsqr
 	else:
 		chisqr = 0.0
 		for i in range(n):
@@ -218,6 +263,6 @@ def linfit(X, Y, eY=None, full_output=False):
 		
 		a_err = sw/delta
 		b_err = sx2/delta
-		return (a, b, a_err, b_err, reduc_chisqr)
+		return a, b, a_err, b_err, reduc_chisqr
 	# END if
 # END linfit

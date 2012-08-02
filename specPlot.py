@@ -1,17 +1,14 @@
-'''Custom Plotting Module
+'''Spectroscopy Package Plotting Module
 	Author: Alex M. Pronschinske
-	Version: 1
 	
 	List of classes: -none-
 	List of functions:
 		format_default
 		plot_density
 		tight_scale
-	Module dependencies: 
-		matplotlib
-		matplotlib.pyplot
 '''
 
+# third-party modules
 import matplotlib
 import matplotlib.pyplot as plt
 
@@ -24,9 +21,7 @@ def pltformat_basic(ax):
 		matplotlib.tight_layout() function.
 		
 		Args:
-			ax (Axes): Representative object for the plot to be formated
-		Returns:
-			N/A
+			ax (Axes): matplotlib.Axis object for the plot to be formated
 	'''
 	ax.set_axisbelow(True)
 	
@@ -46,6 +41,7 @@ def pltformat_basic(ax):
 
 #===============================================================================
 def format_default(ax):
+	'''DEPRECIATED, use pltformat_basic instead'''
 	print (
 		'Warning "format_default" will be depreciated, '
 		+ 'use "pltformat_basic" instead'
@@ -55,6 +51,33 @@ def format_default(ax):
 
 #===============================================================================
 def plot_density(bundle, ax=None, mkrcolor='blue', alpha=None, **extra_kwargs):
+	'''Create curve density plot
+	
+	This function will plot all of the curves in the input bundle on the same
+	axis where each is semi-transparent so that where curves overlap the color
+	appears darker
+	
+	Args:
+		bundle (SpecBundle): Group of data to be plotted
+		ax = None (Axis): Axis on which to add the density plot, if none is
+						   given then one will be made and returned
+		mkrcolor = 'blue' (str): curve color
+		alpha = None (float): The Opacity value of each curve, if none is given
+							   if will be set to 0.1 for bundle of 100 or fewer
+							   curves and set up 8/bundle.N if their are more
+							   than 100 curves
+		**extra_kwargs: Any extra keywords will be passed onto the ax.plot()
+						function call
+	Returns:
+		(Axis) The newly created plot
+	Example:
+		import matplotlib.pyplot as plt
+		fig = plt.figure()
+		ax = fig.add_subplot(111)
+		plot_density(bun, ax)
+		ax2 = plot_density(bun)
+	'''
+	
 	if ax is None:
 		fig = plt.figure()
 		ax = fig.add_subplot(111)
@@ -83,7 +106,21 @@ def plot_density(bundle, ax=None, mkrcolor='blue', alpha=None, **extra_kwargs):
 
 #===============================================================================
 def tight_scale(ax, fit_amount=0.99, growth_factor=0.20):
-	'''TODO: need documentation
+	'''Tighten the y-axis scaling
+	
+	This function will adjust the y-axis limits of a plot so that the specified
+	fit_amount fraction will be within the limits then grow the size of the
+	vertical frame by the growth_factor fractional amount.  For example the
+	default values of fit_amount=0.99 and growth_factor=0.20 will first set the
+	y-limits to accommodate 99% of the data, then make the frame +20% bigger
+	(i.e. 120% of it's adjusted size).
+	
+	Args:
+		ax (Axis): Axis which will be re-scaled
+		fit_amount = 0.99 (float):
+		growth_factor = 0.20 (float):
+	Returns:
+		(tuple) (low_bnd, upp_bnd) New upper and lower bounds of the y-axis.
 	'''
 	
 	# Put all of the y-points of all of the curves into one array and sort them
