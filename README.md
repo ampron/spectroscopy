@@ -1,15 +1,11 @@
-+==============================================================================+
-|                                                                              |
-|  spectroscopy                                                                |
-|                                                                              |
-+==============================================================================+
+spectroscopy
+============
 
 Version 2.0
 
 Created by Alex Pronschinske
    (email: ampron@gmail.com)
 
-============
 Introduction
 ============
 
@@ -20,7 +16,6 @@ MATRIX software and saved in ASCII-encoded text files by SPIP.  Currently there
 are some generalization included to read in other typical column-formated text
 file data as well.
 
-=====================
 Software Requirements
 =====================
 
@@ -30,7 +25,6 @@ This package has the following dependencies:
     - scipy >= 0.9.0 (lower versions are untested)
     - matplotlib >= 1.1.0
 
-============
 Installation
 ============
 
@@ -39,27 +33,32 @@ recommended that you instead install a .pth (path) file point to a custom
 installation location.
 
 Instructions:
+-------------
     - open python in the terminal and look up site-packages folder
-        >>> import sys
-        >>> for p in sys.path:
-        >>>     print repr(p)
-        >>> 
-    -  Typical paths
-        -- Windows 7:     "C:\Python2.7\site-packages\"
-        -- Linux:         "/usr/lib/python2.7/dist-packages"
-        -- Linux (local): "/home/user_name/.local/lib/python2.7/site-packages/"
-    - Copy the "spectroscopy" folder into the desired folder
-    - Or, make a ".pth" file in the site-packages folder with one line that is
+>        >>> import sys
+>        >>> for p in sys.path:
+>        >>>     print repr(p)
+>        >>> 
+
+    1. Typical paths
+    
+        * Windows 7:     "C:\Python2.7\site-packages\"
+        * Linux:         "/usr/lib/python2.7/dist-packages"
+        * Linux (local): "/home/user_name/.local/lib/python2.7/site-packages/"
+    
+    2. Copy the "spectroscopy" folder into the desired folder
+    3. Or, make a ".pth" file in the site-packages folder with one line that is
       the location of the "spectroscopy" folder
 
-==========
 Script Use
 ==========
 
 There are some common use script installed in the "specroscopy/scripts" folder
 that can be run from the terminal.  The command is expected to have the
 following form:
-$ python -m spectroscopy script_name -f arg1 arg2
+
+> $ python -m spectroscopy script_name -f arg1 arg2
+
 In this command the "-m" flag tells python that the spectroscopy package is to
 be run as a script.  The "script_name" will be the name of the python module
 installed in the scripts folder.  We see as an example "-f" is how one includes
@@ -74,7 +73,9 @@ Importing package
 
 All modules in the "spectroscopy/" directory will be *-imported into the
 spectroscopy module when it is imported, so that the command:
->>> import spectroscopy
+
+> >>> import spectroscopy
+
 will yield an object containing all functions and classes in all submodules, but
 not modules in the subpackages (such as scripts or importers).  Although, if the
 user desires they can import individual submodules.
