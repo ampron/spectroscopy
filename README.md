@@ -20,10 +20,10 @@ Software Requirements
 =====================
 
 This package has the following dependencies:
-    - python 2.7
-    - numpy >= 1.5.1 (lower versions are untested)
-    - scipy >= 0.9.0 (lower versions are untested)
-    - matplotlib >= 1.1.0
+    * python 2.7
+    * numpy >= 1.5.1 (lower versions are untested)
+    * scipy >= 0.9.0 (lower versions are untested)
+    * matplotlib >= 1.1.0
 
 Installation
 ============
@@ -34,20 +34,21 @@ installation location.
 
 Instructions:
 -------------
-    - open python in the terminal and look up site-packages folder
+
+    1. Open python in the terminal and look up site-packages folder.
 >        >>> import sys
 >        >>> for p in sys.path:
 >        >>>     print repr(p)
 >        >>> 
 
-    1. Typical paths
+    2. Typical paths
     
         * Windows 7:     "C:\Python2.7\site-packages\"
         * Linux:         "/usr/lib/python2.7/dist-packages"
         * Linux (local): "/home/user_name/.local/lib/python2.7/site-packages/"
     
-    2. Copy the "spectroscopy" folder into the desired folder
-    3. Or, make a ".pth" file in the site-packages folder with one line that is
+    3. Copy the "spectroscopy" folder into the desired folder
+    4. Or, make a ".pth" file in the site-packages folder with one line that is
       the location of the "spectroscopy" folder
 
 Script Use
@@ -74,7 +75,7 @@ Importing package
 All modules in the "spectroscopy/" directory will be *-imported into the
 spectroscopy module when it is imported, so that the command:
 
-> >>> import spectroscopy
+>        >>> import spectroscopy
 
 will yield an object containing all functions and classes in all submodules, but
 not modules in the subpackages (such as scripts or importers).  Although, if the
